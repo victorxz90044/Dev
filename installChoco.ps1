@@ -1,17 +1,10 @@
-# log in to the box
-
-#validate that it doesn't exist
-
-#excute command
-
-# catch any errors
-
 function install-choco {
     param (
-        $host
+
     )
 
-    $installedSoftware = "Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |  Select-Object DisplayName,DisplayVersion, Publisher, InstallDate"
+    $installedSoftware = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |  Select-Object DisplayName,DisplayVersion, Publisher, InstallDate
+    
     if($installedSoftware -notcontains "chocolatey"){
         try{ 
             Invoke-WebRequest https://chocolatey.org/install.ps1 -UseBasicParsing | Invoke-Expression
@@ -22,6 +15,7 @@ function install-choco {
         }
         
     }
+
     else {
         $message = "Chocolatery is already installed"
         $chocolateyInstall = $installedSoftware | Where-Object{ $_.DisplayName -like "Choco*"}
