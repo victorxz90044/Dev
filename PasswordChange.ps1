@@ -76,6 +76,7 @@ Function Get-FilePath{
     
     $serverList = Get-FilePath
     $list = Get-Content $serverList
+ 
     
     $user = read-host "Enter the name of the user you want to change"
     $pass = read-host -assecurestring "New Password" | convertfrom-securestring | ConvertTo-SecureString
@@ -85,10 +86,14 @@ Function Get-FilePath{
 
   if($list -match "localhost"){
     script -server $list -user $user -pass $pass
+    Write-Host $list
+    
   }
   else{
       $mycred = Get-Credential -Message "Enter creds to log into the servers"
-      $list | Invoke-Command -ComputerName $_ -Credential $mycred -scriptblock {script -server $_ -user $user -pass $pass}
+   
+    
+      $list | %{Invoke-Command -ComputerName $_ -Credential $mycred {script -server $_ -user $user -pass $pass}}
   }
   
     
