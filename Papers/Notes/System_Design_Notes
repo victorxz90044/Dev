@@ -1,0 +1,303 @@
+### System design - Steven Stone
+- Messenger App design
+#### Requirements and Goals of the System
+- functional requirements
+    - one on one conversations between users
+    - status of online/offline of users
+    - persistent storage of chat history 
+- non-functional requirements
+    - real-time chatting experience with min latency
+    - high consistent chat history
+    - high availability 
+    - tolerate lower availability in the interest of consistency with chat history
+- extended requirements
+    - should support group chat
+    - push notifications 
+
+#### Capacity of Estimation and Constraints
+- premise
+    - 500 mil active users 
+    - 40 daily messengers 
+- storage estimation
+    - assume 100 bytes per message
+        - day 
+            - 20 bil message * 100 bytes ~= 2 tb a day
+        - 5 years
+            - 2 tb * 365 days * 5 years ~= 3.6 PB
+    - user information, message metadata (id, timestamp, etc) 
+    - data compression
+    - replication
+- Bandwidth Estimation 
+    - assume 100 bytes per message
+        - 25 mb per sec
+        - 2 tb/86400 sec ~= 25 mb/s
+        
+#### High Level Design
+- high level orchestration of all communications between users
+- workflow
+    - user A sends message to User B through the chat server 
+    - server stores the message in its database and sends the message to User-B
+    - server stores the message in its database and send the message to user-b
+    - THE server notifies user-a that the message has been delivered successfully to user-b
+
+
+#### Detailed Component Design 
+- simple design use
+###### Message Handling
+- pull vs push 
+- pull model
+    - server keeps tracks of message that are still waiting to be delivered 
+    - waiting for a user connection 
+    - a lot of empty messages
+    - not efficient solution
+- push model 
+    - active users keep a connection
+    - sends message as soon as the server gets it
+    - no tracking of pending messages
+    - HTTP Long Polling vs websocks
+    - keep track of all opened connections
+        - dict with userid and connection
+    - when user goes offline
+        - server notify user about fail message sent
+        - if the disconnect is not long, try to reconnect
+    - how chat servers we need 
+        - if 500 mil connections, server can handle 50k. then we need 10k servers
+        - keep in mind port exhaustion 
+    - what servers hold the user connection
+        - load balancer
+    - how to process request
+        - store message in db
+        - send message to the receiver
+        - send acknowledgment to the sender
+    - server process a 'deliver message' request
+        - 
+    
+###### Storing and Retrieving the messages from the database
+###### Managing User's Status
+
+#### Data Partitioning 
+#### Cache
+#### Load Balancing
+#### Fault tolerance and Replication
+#### Extended Requirements
+###### Group Chat
+###### Push Notifications
+
+### Things I would add
+#### Monitoring 
+> Understand the ***current state*** vs ***desired state***
+- how do we obtain these two states
+    - sli, slo, and sla with Observability
+    - error budgets
+- monitoring state 
+    - you see configuration drift
+    - *Latency*
+        -The time it takes to deploy and make the system’s running state match its desired state
+    - *Traffic*
+        - Frequency of deployments
+        - The number of deployments in progress
+    - *Errors*
+        - The number of deployments that failed and the current number of deployments in a failed state
+        - The number of out-of-sync deployments where the system’s running state does not match its desired state
+    - *Saturation*
+        - Length of time a deployment has been queued and not processed
+    - *app liveness*
+    - *app readiness* 
+#### Authentication 
+> permissions to enter the system 
+#### Authorization
+> permissions to view objects
+#### Data Integrity 
+> Integrity assures that the data or information system can be trusted. Ensures that it is edited by only authorized persons and remains in its original state when at rest. Data encryption and hashing algorithms are key processes in providing integrity
+#### Data Confidentiality
+> Ensures that data or an information system is accessed by only an authorized person. User Id’s and passwords, access control lists (ACL) and policy based security are some of the methods through which confidentiality is achieved
+#### Application Deployment
+#### CIS standards
+> CIS Controls and CIS Benchmarks, globally recognized best practices for securing IT systems and data
+- CIS Control 1: Inventory and Control of Enterprise Assets
+- CIS Control 2: Inventory and Control of Software Assets
+- CIS Control 3: Data Protection
+- CIS Control 4: Secure Configuration of Enterprise Assets and Software
+- CIS Control 5: Account Management
+- CIS Control 6: Access Control Management
+- CIS Control 7: Continuous Vulnerability Management
+- CIS Control 8: Audit Log Management
+- CIS Control 9: Email Web Browser and Protections
+- CIS Control 10: Malware Defenses
+- CIS Control 11: Data Recovery
+- CIS Control 12: Network Infrastructure Management
+- CIS Control 13: Network Monitoring and Defense
+- CIS Control 14: Security Awareness and Skills Training
+- CIS Control 15: Service Provider Management
+- CIS Control 16: Application Software Security
+- CIS Control 17: Incident Response Management
+- CIS Control 18: Penetration Testing
+
+#### OWASP top 10 
+- Broken Access Control 
+    - the contributed data indicates that on average, 3.81% of applications tested had one or more Common Weakness Enumerations (CWEs) with more than 318k occurrences of CWEs in this risk category. The 34 CWEs mapped to Broken Access Control had more occurrences in applications than any other category.
+- Cryptographic Failures    
+    - which was broad symptom rather than a root cause. The renewed name focuses on failures related to cryptography as it has been implicitly before. This category often leads to sensitive data exposure or system compromise.
+- Injection 
+    - 94% of the applications were tested for some form of injection with a max incidence rate of 19%, an average incidence rate of 3.37%, and the 33 CWEs mapped into this category have the second most occurrences in applications with 274k occurrences. Cross-site Scripting is now part of this category in this edition.
+- Insecure Design 
+    - If we genuinely want to "move left" as an industry, we need more threat modeling, secure design patterns and principles, and reference architectures. An insecure design cannot be fixed by a perfect implementation as by definition, needed security controls were never created to defend against specific attacks.
+- Security Misconfiguration 
+    - 90% of applications were tested for some form of misconfiguration, with an average incidence rate of 4.5%, and over 208k occurrences of CWEs mapped to this risk category. With more shifts into highly configurable software, it's not surprising to see this category move up. The former category for A4:2017-XML External Entities (XXE) is now part of this risk category.
+- Vulnerable and Outdated Components 
+    - This category moves up from #9 in 2017 and is a known issue that we struggle to test and assess risk. It is the only category not to have any Common Vulnerability and Exposures (CVEs) mapped to the included CWEs, so a default exploit and impact weights of 5.0 are factored into their scores.
+- Identification and Authentication Failures 
+    - This category is still an integral part of the Top 10, but the increased availability of standardized frameworks seems to be helping.
+- Software and Data Integrity Failures 
+    - focusing on making assumptions related to software updates, critical data, and CI/CD pipelines without verifying integrity. One of the highest weighted impacts from Common Vulnerability and Exposures/Common Vulnerability Scoring System (CVE/CVSS) data mapped to the 10 CWEs in this category. 
+- Security Logging and Monitoring Failures 
+    - This category is expanded to include more types of failures, is challenging to test for, and isn't well represented in the CVE/CVSS data. However, failures in this category can directly impact visibility, incident alerting, and forensics.
+- Server-Side Request Forgery
+    - The data shows a relatively low incidence rate with above average testing coverage, along with above-average ratings for Exploit and Impact potential. This category represents the scenario where the security community members are telling us this is important, even though it's not illustrated in the data at this time.
+
+#### Data Availability 
+> Data and information systems are available when required. Hardware maintenance, software patching/upgrading and network optimization ensures availability
+#### DevSecOps
+#### GitOps
+##### Principles of GitOps
+> Key Principles 
+        - Describes the entire system Declaratively
+        - Version Desired system state by using Git
+        -  It uses tooling to automatically apply approved changes
+        - it uses self healing agents to alert and correct any divergence
+##### The Branching Strategy and GitOps Workflow
+> GitOps requires at least two kinds of Git repositories to function: the application repository from where your builds are triggered and the environment repository that contains all of the infrastructure and configuration as code. 
+
+- push model 
+    - The push model pushes any changes that occur within your Git repository to the environment
+    - model is unaware of the existing configuration and reacts only to changes made by your git repos
+    - set up monitoring to understand whether there are any deviations
+    - creds need to be store in tools
+    - tool typically used
+        - jenkins for ci
+        - terraform provisioning
+        - ansible for config management
+        - rundeck 
+- pull model
+    -The pull model is an agent-based deployment model (which is also known as an operator-based deployment model).
+    - agent monitors the git repo for changes 
+    - agent constantly compares the existing configuration with the desired state 
+    - alerts when desired state is unable to be met
+    - creds lives with the agent
+    - ? maybe using WA as the agent
+
+- most orgs implement a hybrid model
+
+##### Structuring the Git Repo
+> To implement GitOps, we require at least two repositories: the application repository and the environment repository. 
+- will use the app folder as our scripts folders
+    - app code end up in containers
+        - avoid versioning issues py 2 vs py 3 or ps 3 vs ps 5.1
+    - branching strageies to manage your code
+        - gitflow
+            - requires several kinds of branches (for instance, master branches, hotfixes, release branches, develop, and feature branches) and has a rigid structure. 
+            - doesn't seem ideal for us as tool builders
+        -Github Flow 
+            - contains a single master branch
+            - branches that eventually merge with master
+            - ideal for us 
+- Environment Repo 
+    - stores the env specific configurations that are needed to run the application code
+    - docker, terraform, and ansible come in play
+
+#### SSL
+#### The Twelve Factors
+- Codebase
+    - One codebase tracked in revision control, many deploys
+- Dependencies
+    - Explicitly declare and isolate dependencies
+- Config
+    - Store config in the environment
+- Backing services
+    - Treat backing services as attached resources
+- Build, release, run
+    - Strictly separate build and run stages
+- Processes
+    - Execute the app as one or more stateless processes
+- Port binding
+    - Export services via port binding
+- Concurrency
+    - Scale out via the process model
+- Disposability
+    - Maximize robustness with fast startup and graceful shutdown
+- Dev/prod parity
+    - Keep development, staging, and production as similar as possible
+- Logs
+    - Treat logs as event streams
+- Admin processes
+    - Run admin/management tasks as one-off processes
+#### Over worked, over stressed, and closer to getting Pwned
+- Systems Admin pain points
+    - Project deadlines​
+    - Low number of full-time employees​
+    - Budget ​
+    - Learning new technology​
+    - Time vs cost​
+    - Prevention vs clean-up 
+- How does the network look from the inside/outside 
+    - Communication within our infrastructure​
+    - 2FA on external-facing infrastructure ​
+    - What is visible on the internet​
+        - Ports open​
+        - Company public files (meta data) ​
+        - Exposed company directory​
+        - Lack of network egress controls​
+    - What portals are open​
+        - Looking for anything to pivot externally​
+        - exposed web admin panels
+- Inventory
+    - does it exist
+        - software
+        - hardware
+- Patch management
+- Logging and monitoring 
+- local admin
+- passwords and 2fa
+- network segmentation
+- vuln scanning
+- system hardening
+- data classification 
+- Security Strategic Plan
+- Social/Phishing Attacks
+- Roles, Roadmaps, and execution
+- honey pots
+- eating the elephant
+### **Building Secure and Reliable Systems by Google** *Designing Systems*
+- *Design for Least Privilege*
+    - how to evaluate access based upon risk—is an excellent place to start. 
+- *Design for Understandability*
+    - analyze and understand your systems through invariants and mental models. 
+    - Using a layered system architecture built on standardized frameworks for identity, authorization, and access control.
+    - To respond to a shifting risk landscape, 
+        - be able to change your infrastructure frequently and quickly while also maintaining a highly reliable service. 
+- *Design for a Changing Landscape*
+    - presents practices that let you adapt to short-, medium-, and long-term changes, as well as unexpected complications that might arise as you run a service.
+
+- The guidelines mentioned thus far will have limited benefits if a system cannot withstand a major malfunction or disruption.
+
+- *Design for Resilience* 
+    - discusses strategies for keeping a system running during an incident, perhaps in a degraded mode.
+    - possible look at chaos engineering  
+- *Design for Recovery*
+    - approaches systems from the perspective of fixing them after breakage
+    - principles of SRE 
+
+### Practical Programming - Cameron Spiller 
+- You will not be running this code
+    - just implementation that it looks right
+- time.time.now()
+    - ?
+- return a valid token
+    - validation parameters
+        - non-expired token
+            - ttl should be 60 or send for another one  
+        - delete a valid, non-expired token first before you can call the generate method to provide you with a new token
+        - only one valid token may exist at any time
+        - locks and caching
+            - ?
+        - if the cache file is locked. wait your turn 
